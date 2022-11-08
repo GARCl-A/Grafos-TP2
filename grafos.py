@@ -1,31 +1,16 @@
-"""Requisitos
-Ler gráfico com pesos - OK
-Dijkstra -
-    Heap - 
-    Vetor - OK
-Floyd-Warshall -
-Distância -
-    Sem negativos - OK
-    Com negativos -
-Caminho Mínimo -
-    Sem negativos - OK
-    Com negativos -
-Ávore Geradora Mínima -
-    Sem negativos - OK
-    Com negativos -
-"""
-
 import numpy as np
-import random as random
-import itertools
+import math, heapdict, random, itertools
 
 class Grafo():
-    def __init__(self, tipo_grafo, txt):
+    def __init__(self, tipo_grafo, peso, txt):
         if tipo_grafo == "matriz":
             self.grafo = GrafoMatriz(txt)
+            if peso == True:
+                print("Grafo com matriz apena para grafo sem peso")
+                self.grafo = GrafoLista(peso, txt)
         if tipo_grafo =="lista":
-            self.grafo = GrafoLista(txt)
-
+            self.grafo = GrafoLista(peso, txt)
+            
 #Legado do TP1, não possui nenhuma alteração para o TP2              
 class GrafoMatriz():
    
@@ -208,7 +193,7 @@ class ListaVizinhos:
         vizinho.proximo = self.head
         self.head = vizinho
         self.size += 1
-
+        
 class Vizinho:
     #Cada vizinho dessa classe será um nó da lista de vizinhos
     def __init__(self, vizinho: int, peso: int):
@@ -216,34 +201,50 @@ class Vizinho:
         self.peso = peso
         self.proximo = None
     def __repr__(self):
-        return (self.vizinho)
-
+        return (str(self.peso))
+    
 class GrafoLista():
-    def __init__(self,txt:str):
+    def __init__(self, peso:bool, txt:str):
         arquivo = open(txt, 'r')
         self._vertices = int(arquivo.readline())         #Total de vertices
         self._arestas = 0
         self._vetor = []
+        self._negativo = False
+        self._peso = peso
         for vertice in range(self._vertices):    #Inicializando as listas
             self._vetor.append(ListaVizinhos())
-        for linha in arquivo:   #Adicionando vizinhos às listas
-            split = linha.split()
-        
-            vertice1 = int(linha.split()[1])
-            vertice2 = int(linha.split()[0])
-            peso_aresta = int(linha.split()[2])
+        if self._peso == True:
+            for linha in arquivo:   #Adicionando vizinhos às listas
+                split = linha.split()
             
-            self._vetor[int(linha.split()[0])-1].add(Vizinho(vertice1, peso_aresta))
-            self._vetor[int(linha.split()[1])-1].add(Vizinho(vertice2, peso_aresta))
-            self._arestas += 1 #Total de arestas
+                vertice1 = int(linha.split()[1])
+                vertice2 = int(linha.split()[0])
+                peso_aresta = float(linha.split()[2])
+
+                if peso_aresta < 0:
+                    self._negativo = True
+                
+                self._vetor[int(linha.split()[0])-1].add(Vizinho(vertice1, peso_aresta))
+                self._vetor[int(linha.split()[1])-1].add(Vizinho(vertice2, peso_aresta))
+                self._arestas += 1 #Total de arestas
+        else:
+            for linha in arquivo:   #Adicionando vizinhos às listas
+                split = linha.split()
+                self._vetor[int(linha.split()[0])-1].add(Vizinho(int(linha.split()[1]),0))
+                self._vetor[int(linha.split()[1])-1].add(Vizinho(int(linha.split()[0]),0))
+                self._arestas += 1 #Total de arestas
+            
         arquivo.close
 
+    #Legado do TP1
     def vertices(self):
         return self._vertices
     
+    #Legado do TP1
     def arestas(self):
         return self._arestas
     
+    #Legado do TP1
     def graus(self):
         graus = np.zeros(self._vertices, dtype = int)
         vertice = 0
@@ -252,18 +253,22 @@ class GrafoLista():
             vertice+=1
         return graus
 
+    #Legado do TP1
     def grau_max(self):
         graus = self.graus()
         return graus.max()
     
+    #Legado do TP1
     def grau_min(self):
         graus = self.graus()
         return graus.min()
 
+    #Legado do TP1
     def grau_med(self):
         graus = self.graus()
         return graus.mean()
     
+    #Legado do TP1
     def grau_median(self):
         graus = self.graus()
         mediana = np.median(graus, axis=0)
@@ -335,45 +340,6 @@ class GrafoLista():
         arquivo.write('Se o Nivel é -1 o vértice fora da componente conexa\n\n'+f'{escrita}')
         arquivo.close()
            
-    def distancia(self,partida:int, chegada:int,peso: bool, neg:bool):
-        if peso == 0 and neg == 0:
-            vetor_pais = self.busca_largura(partida,'dump.txt',0)[0]
-
-            atual = chegada
-            distancia = 0
-            while atual != partida:
-                atual = vetor_pais[atual - 1]
-                if atual == -1:
-                    return atual
-                distancia += 1
-    
-        elif peso == 1 and neg == 0:
-            distancias = self.DijkstraVetor(partida)[0]
-            distancia = distancias[chegada - 1]
-
-        return distancia
-
-    #REFACTOR 
-    def diametro(self):
-        if self._vertices < 1000:
-            diametro = 0
-            for linha in range(self._vertices):
-                vetor_graus = self.busca_largura(linha+1,'dump.txt',0)[1] #Lembrando novamente que o vertice X estará na posição X-1
-                maior=np.max(vetor_graus)
-                if maior > diametro:
-                    diametro = maior
-        else:
-            diametro = 0
-            for i in range(1500):
-                vertice = random.randint(1, self._vertices)
-                print(vertice)
-                vetor_graus = self.busca_largura(vertice, 'dump.txt',0)[1] 
-                maior=np.max(vetor_graus)
-                if maior > diametro:
-                    diametro = maior
-                
-        return diametro
-
     #Legado do TP1
     def componentes_conexas(self, nome_arquivo):
         componentes_conexas = []
@@ -420,33 +386,99 @@ class GrafoLista():
             arquivo.writelines(f'Tamanho da componente: {len(i)} - Vértices: {i}\n')
         arquivo.close()
 
+    #Legado do TP1   
+    def diametro(self) -> float:
+        if self._vertices < 1000:
+            diametro = 0
+            for linha in range(self._vertices):
+                vetor_graus = self.busca_largura(linha+1,'dump.txt',0)[1] #Lembrando novamente que o vertice X estará na posição X-1
+                maior=np.max(vetor_graus)
+                if maior > diametro:
+                    diametro = maior
+        else: #Aproximação para grafos grandes.
+            diametro = 0
+            for i in range(1500):
+                vertice = random.randint(1, self._vertices)
+                print(vertice)
+                vetor_graus = self.busca_largura(vertice, 'dump.txt',0)[1] 
+                maior=np.max(vetor_graus)
+                if maior > diametro:
+                    diametro = maior
+                
+        return diametro
+    
     def DijkstraVetor(self, vertice: int):
+        matriz = []  #[:][0] -> distancias, [:][1] -> vertice
+        for i in range(self.vertices()):
+            matriz.append([np.inf, i+1, 0])
+
+        pais = np.array([-1] * self._vertices, dtype = int) #Lembrando novamente que o vertice X estará na posição X-1
+        vertices = self._vertices
+        matriz[vertice-1][0] = 0
+        fila = self.cria_fila(matriz)
+        while fila != []:
+            minimo = self.get_minimo(fila)
+            if minimo == None:
+                break
+            matriz[minimo - 1][2] = 1
+            proximo_vizinho = self._vetor[minimo-1].head
+            while proximo_vizinho != None:
+                vertice_atual = proximo_vizinho.vizinho
+                peso_atual = proximo_vizinho.peso
+                if matriz[vertice_atual-1][0] > matriz[minimo-1][0] + peso_atual: #Quando há alteração na distância dos vértices
+                    matriz[vertice_atual-1][0] = matriz[minimo-1][0] + peso_atual
+                    pais[vertice_atual-1] = minimo
+                    fila = self.cria_fila(matriz)
+                proximo_vizinho = proximo_vizinho.proximo
+        
+        distancia = self.get_distancias(matriz)
+        return (distancia, pais)
+
+    def cria_fila(self,matriz):
+        fila = sorted(matriz, key = lambda x: x[0])  
+        return fila
+
+    def get_minimo(self,fila):
+        for i in fila:
+            if i[2] == 0:
+                return i[1]
+
+    def get_distancias(self,matriz):
+        distancias = []
+        for i in matriz:
+            distancias.append(i[0])
+
+        return distancias
+
+    def DijkstraHeap(self, vertice: int) -> tuple:
         distancia = np.array([np.inf] * self.vertices()) #array de infinitos.
         pais = np.array([-1] * self._vertices, dtype = int) #Lembrando novamente que o vertice X estará na posição X-1
-        pesos = np.array([np.inf] * self.vertices()) #array de infinitos. Isso supõe que não existam pesos infinitos no grafo
-        explorados = set([])
-        vertices = set(range(1,self.vertices() + 1))
+        vertices = self._vertices
         distancia[vertice-1] = 0
-        pesos[vertice-1] = 0
         menor = 0
-        while explorados != vertices:
-            minimo = np.argsort(distancia)[menor] #Pega o índice (vértice) com o k menor valor (distância)
+        heap = heapdict.heapdict()
+        heap[vertice] = 0 
+        while menor != vertices:
+            if len(heap.heap) == 0:
+                break
+            minimo = heap.popitem()[0] - 1
+            if minimo == np.inf:
+                break
             menor += 1
-            explorados.add(minimo+1)
             proximo_vizinho = self._vetor[minimo].head
             while proximo_vizinho != None:
                 vertice_atual = proximo_vizinho.vizinho
                 peso_atual = proximo_vizinho.peso
-                if distancia[vertice_atual-1] > distancia[minimo] + peso_atual:
+                if distancia[vertice_atual-1] > distancia[minimo] + peso_atual: #Quando há alteração na distância dos vértices
                     distancia[vertice_atual-1] = distancia[minimo] + peso_atual
+                    heap[vertice_atual] = distancia[minimo] + peso_atual #Um vértice só entrará na fila de execução se sua distância por reduzida
                     pais[vertice_atual-1] = minimo + 1
-                    pesos[vertice_atual-1] = peso_atual
                 proximo_vizinho = proximo_vizinho.proximo
-        return (distancia, pais, pesos)
-
-    def caminho_minimo(self,partida:int, chegada:int,peso: bool, neg:bool) -> list:
-        if peso == 1 and neg == 0:
-            pais = self.DijkstraVetor(partida)[1]
+        return (distancia, pais)
+    
+    def caminho_minimo(self,partida:int, chegada:int) -> list:
+        if self._peso == False:
+            pais = self.busca_largura(partida,'dump.txt', 0)[0]
             if pais[chegada - 1] == -1:
                 return 'Não há caminho.' 
             else:
@@ -459,17 +491,94 @@ class GrafoLista():
                 caminho.reverse()
                 return caminho
     
-    def arvore_geradora(self,partida:int, peso: bool, neg:bool, txt:str) -> float:
-        dijkstra = self.DijkstraVetor(partida)
-        pais = dijkstra[1]
-        pesos = dijkstra[2]
-        print(pesos)
+        elif self._peso == True and self._negativo == False:
+            pais = self.DijkstraHeap(partida)[1]
+            if pais[chegada - 1] == -1:
+                return 'Não há caminho.' 
+            else:
+                caminho = [chegada]
+                atual = chegada
+                print(pais)
+                while atual != partida:
+                    atual = pais[atual-1]
+                    caminho.append(atual)
+                caminho.reverse()
+                return caminho
+
+        elif self._negativo == True:
+            caminho = "Grafo apresenta peso negativo." #Dijkstra não é capaz de computar distancias para grafos negativos.
+
+    def prim(self, partida:int, txt_saida:str) -> float:
+        pais = np.array([-1] * self._vertices, dtype = int) #Lembrando novamente que o vertice X estará na posição X-1
+        pesos = np.array([np.inf] * self.vertices()) #array de infinitos. Isso supõe que não existam pesos infinitos no grafo
+        vertices = self._vertices
+        pesos[partida-1] = 0
+        menor = 0
+        heap = heapdict.heapdict()
+        heap[partida] = 0 
+        while menor != vertices:
+            minimo = heap.popitem()[0] - 1
+            if minimo == np.inf:
+                break
+            menor += 1
+            proximo_vizinho = self._vetor[minimo].head
+            while proximo_vizinho != None:
+                vertice_atual = proximo_vizinho.vizinho
+                peso_atual = proximo_vizinho.peso
+                if pesos[vertice_atual-1] > peso_atual:
+                    pesos[vertice_atual-1] = peso_atual
+                    heap[vertice_atual] = peso_atual #Um vértice só entrará na fila de execução se sua distância for reduzida
+                    pais[vertice_atual-1] = minimo + 1
+                proximo_vizinho = proximo_vizinho.proximo
         peso_total = sum(pesos)
-        arquivo = open(txt, "w")
-        arquivo.writelines(f'{len(pais)}\n') #Primeira linha do arquivo diz quantros grafos tem
-        #As outras linhas: "vertice1 vertice2 peso"
+        arquivo = open(txt_saida, "w")
         for i in range(1,len(pais)+1):
             if i != partida:
                 arquivo.writelines(f'{i} {pais[i-1]} {pesos[i-1]}\n')
         arquivo.close()
         return peso_total
+
+    def distanciaHeap(self,partida:int, chegada:int) -> float:
+        if self._peso == False:
+            vetor_pais = self.busca_largura(partida,'dump.txt',0)[0]
+
+            atual = chegada
+            distancia = 0
+            while atual != partida:
+                atual = vetor_pais[atual - 1]
+                if atual == -1:
+                    return atual
+                distancia += 1
+    
+        elif self._peso == True and self._negativo == False:
+            #Mudar para heap quando código pronto pois é mais rápido
+            distancias = self.DijkstraHeap(partida)[0]
+            distancia = distancias[chegada - 1]
+
+        elif self._negativo == True:
+            distancia = "Grafo apresenta peso negativo." #Dijkstra não é capaz de computar distancias para grafos negativos.
+
+        return distancia
+
+    def distanciaVetor(self,partida:int, chegada:int) -> float:
+        if self._peso == False:
+            vetor_pais = self.busca_largura(partida,'dump.txt',0)[0]
+
+            atual = chegada
+            distancia = 0
+            while atual != partida:
+                atual = vetor_pais[atual - 1]
+                if atual == -1:
+                    return atual
+                distancia += 1
+    
+        elif self._peso == True and self._negativo == False:
+            #Mudar para heap quando código pronto pois é mais rápido
+            distancias = self.DijkstraVetor(partida)[0]
+            distancia = distancias[chegada - 1]
+
+        elif self._negativo == True:
+            distancia = "Grafo apresenta peso negativo." #Dijkstra não é capaz de computar distancias para grafos negativos.
+
+        return distancia
+ 
